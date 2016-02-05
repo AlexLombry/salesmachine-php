@@ -43,32 +43,44 @@ class Salesmachine_Consumer_ForkCurl extends Salesmachine_QueueConsumer
      */
     public function flushBatch($messages)
     {
-
         $body = $this->payload($messages);
         $payload = json_encode($body);
 
-        # Escape for shell usage.
-        $payload = escapeshellarg($payload);
+        try {
+            // init curl, send data and headers
+            $ch = curl_init($this->generateApiUrl());
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
 
+            // Send the request & save response to $response
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            if ($this->debug()) {
+                var_dump(curl_getinfo($ch));
+            }
+
+            return $response;
+        } catch (Exception $e) {
+            $this->handleError($e->getCode(), $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Generate api url base on ssl and host data
+     *
+     * @return string
+     */
+    private function generateApiUrl()
+    {
         $protocol = $this->ssl() ? "https://" : "http://";
         $id = $this->token . ":" . $this->secret . "@";
         $host = $this->host();
         $path = "/v1/" . $this->endpoint;
-        $url = $protocol . $id . $host . $path;
 
-        $cmd = "curl -X POST -H 'Content-Type: application/json'";
-        $cmd .= " -d " . $payload . " '" . $url . "'";
-
-        if (!$this->debug()) {
-            $cmd .= " > /dev/null 2>&1 &";
-        }
-
-        exec($cmd, $output, $exit);
-
-        if ($exit != 0) {
-            $this->handleError($exit, $output);
-        }
-
-        return $exit == 0 && (!isset($output[0]) || !isset(json_decode($output[0], true)['error']));
+        return $protocol . $id . $host . $path;
     }
 }

@@ -63,7 +63,6 @@ Salesmachine::init($args['token'], $args['secret'], array(
 /**
  * Payloads
  */
-
 $total = 0;
 $successful = 0;
 foreach ($lines as $line) {
@@ -85,14 +84,15 @@ unlink($file);
 /**
  * Sent
  */
-
 print("sent $successful from $total requests successfully");
 exit(0);
 
 /**
  * Parse arguments
+ *
+ * @param $argv
+ * @return array
  */
-
 function parse($argv){
   $ret = array();
 
